@@ -46,6 +46,7 @@ public class ConsentArtefactRepository {
     private static final String UPDATE_CONSENT_ARTEFACT_STATUS_QUERY = "UPDATE consent_artefact SET status=$1, " +
             "date_modified=$2 WHERE consent_artefact_id=$3";
     private static final String FAILED_TO_RETRIEVE_CA = "Failed to retrieve Consent Artifact.";
+    private static final String CA_EXPIRED = "Consent Artefact EXPIRED";
 
     private PgPool dbClient;
 
@@ -186,7 +187,20 @@ public class ConsentArtefactRepository {
                 update(consentId, status, monoSink, transaction, UPDATE_CONSENT_ARTEFACT_STATUS_QUERY);
                 transaction.commit();
                 monoSink.success();
-            }else {
+            } else {
+                monoSink.error(new RuntimeException("Error connecting to database. "));
+            }
+        }));
+    }
+
+    public Mono<Void> updateConsentArtefactStatus(String consentId, ConsentStatus status) {
+        return Mono.create(monoSink -> dbClient.begin(res -> {
+            if (res.succeeded()) {
+                Transaction transaction = res.result();
+                update(consentId, status, monoSink, transaction, UPDATE_CONSENT_ARTEFACT_STATUS_QUERY);
+                transaction.commit();
+                monoSink.success();
+            } else {
                 monoSink.error(new RuntimeException("Error connecting to database. "));
             }
         }));
@@ -202,7 +216,7 @@ public class ConsentArtefactRepository {
                     if (updateHandler.failed()) {
                         transaction.close();
                         monoSink.error(new Exception("Failed to update status"));
-                    } 
+                    }
                 });
     }
 
